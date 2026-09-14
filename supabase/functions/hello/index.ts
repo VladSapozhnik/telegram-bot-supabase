@@ -17,7 +17,8 @@ Deno.serve((req) => {
 
   return new Response(
     JSON.stringify({
-      message: "Hello from Supabase!",
+      message: "hello, it-incubator",
+      studentId: '#6254'
     }),
     {
       status: 200,
