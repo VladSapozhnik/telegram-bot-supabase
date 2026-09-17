@@ -1,0 +1,76 @@
+import { IExchangeRateProvider } from "../ports/index.ts";
+
+export class GetCurrencyRateUseCase {
+  constructor(private rateProvider: IExchangeRateProvider) {}
+
+  async execute(text: string): Promise<{
+    found: boolean;
+    currency?: string;
+    rate?: number | null;
+    messageText: string;
+  }> {
+    if (text.startsWith("/start")) {
+      return {
+        found: false,
+        messageText:
+          "Привет! Отправь мне код любой валюты (например: EUR, GBP, JPY, RUB), и я пришлю её курс относительно USD.",
+      };
+    }
+
+    const detectedCurrency = await this.findCurrencyInText(text);
+
+    if (!detectedCurrency) {
+      return {
+        found: false,
+        messageText:
+          "Не удалось найти код валюты в вашем сообщении. Пожалуйста, укажите трёхбуквенный код валюты (например, EUR, GBP, JPY, CNY).",
+      };
+    }
+
+    if (detectedCurrency === "USD") {
+      return {
+        found: true,
+        currency: "USD",
+        rate: 1,
+        messageText: "1 USD = 1.00 USD (базовая валюта).",
+      };
+    }
+
+    const rate = await this.rateProvider.getUsdRate(detectedCurrency);
+    if (rate === null) {
+      return {
+        found: true,
+        currency: detectedCurrency,
+        rate: null,
+        messageText: `К сожалению, не удалось получить курс для валюты ${detectedCurrency} через сервис Frankfurter.`,
+      };
+    }
+
+    const inverse = (1 / rate).toFixed(4);
+    return {
+      found: true,
+      currency: detectedCurrency,
+      rate,
+      messageText: `Курс ${detectedCurrency} относительно USD:\n• 1 USD = ${rate} ${detectedCurrency}\n• 1 ${detectedCurrency} ≈ ${inverse} USD`,
+    };
+  }
+
+  private async findCurrencyInText(text: string): Promise<string | null> {
+    const supported = await this.rateProvider.getSupportedCurrencies();
+    const supportedSet = new Set(supported.map((s) => s.toUpperCase()));
+
+    const matches = text.match(/\b[a-zA-Z]{3}\b/g);
+    if (!matches) {
+      return null;
+    }
+
+    for (const match of matches) {
+      const code = match.toUpperCase();
+      if (supportedSet.has(code)) {
+        return code;
+      }
+    }
+
+    return null;
+  }
+}

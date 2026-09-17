@@ -1,4 +1,3 @@
-```gitignore
 # Dependencies
 node_modules/
 .pnpm-store/
@@ -37,4 +36,3 @@ coverage/
 
 # Local Supabase data
 supabase/.local/
-```
